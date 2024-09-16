@@ -897,3 +897,36 @@ async fn test_describe_topics() {
     let second_topic_description = res[1].as_ref().expect("describe topics failed");
     assert!(second_topic_description.authorized_operations.is_some());
 }
+
+/// Test the admin client's describe cluster functionality.
+#[tokio::test]
+async fn test_describe_cluster() {
+    init_test_logger();
+
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    // Create admin client
+    let admin_client = utils::admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+    let opts = AdminOptions::new();
+
+    // Describe the cluster and verify its properties.
+    let res = admin_client
+        .describe_cluster(&opts)
+        .await
+        .expect("describe cluster failed");
+    assert!(!res.nodes.is_empty());
+    assert_eq!(res.authorized_operations, None);
+
+    // Describe the cluster with authorized operations and verify the properties.
+    let opts = opts.include_authorized_operations(true);
+    let res = admin_client
+        .describe_cluster(&opts)
+        .await
+        .expect("describe cluster failed");
+    assert!(res.authorized_operations.is_some());
+}
